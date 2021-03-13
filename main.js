@@ -81,32 +81,10 @@ function onStopPlaying()
 
 function onResize()
 {
-    // canvas.width = window.innerWidth;
-    // canvas.height = window.innerHeight;
     viewportSize = Math.min(window.innerWidth, window.innerHeight);
     canvas.width = canvas.height = viewportSize;
 
-    // if(canvas.width > canvas.height)
-    //     gl.viewport(canvas.width / 2 - viewportSize / 2, 0, viewportSize, viewportSize);
-    // else
-    //     gl.viewport(0, canvas.height / 2 - viewportSize / 2, viewportSize, viewportSize);
-
     gl.viewport(0, 0, viewportSize, viewportSize);
-
-    /* ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    imgData = ctx.createImageData(viewportSize, viewportSize);
-    imgBuf = new Uint32Array(imgData.data.buffer);
-
-    imgBuf.fill(0xFF000000);
-
-    if(canvas.width == canvas.height)
-        return;
-
-    if(canvas.width > canvas.height)
-        viewportOrigin = [canvas.width / 2 - viewportSize / 2, 0];
-    else
-        viewportOrigin = [0, canvas.height / 2 - viewportSize / 2]; */
 }
 
 function audioSetup()
