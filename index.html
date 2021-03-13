@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oscilloview</title>
+    <style>
+        body
+        {
+            background-color: #101010;
+            margin: 0px;
+        }
+
+        canvas
+        {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        div#box
+        {
+            padding: 15px 30px;
+            background-color: #505050;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        div#box input[type="submit"]
+        {
+            float: right;
+        }
+
+        html.playing div#box
+        {
+            display: none;
+        }
+
+        button#stop
+        {
+            position: fixed;
+            top: 5px;
+            right: 5px;
+        }
+
+        html:not(.playing) button#stop
+        {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas></canvas>
+    <div id="box">
+        <input type="file">
+        <br>
+        <input type="submit" value="do the thing">
+    </div>
+    <button id="stop">Stop</button>
+</body>
+</html>
