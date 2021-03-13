@@ -1,179 +1,226 @@
+const fftSize = 2 << 10;
+const lineColor = [0x13, 0xA1, 0x0E].map(v => v / 255);
+
 const $ = document.querySelector.bind(document);
 const canvas = $("canvas");
-const ctx = canvas.getContext("2d", { alpha: true });
+const gl = canvas.getContext("webgl", {
+    alpha: true,
+    depth: false,
+    stencil: false,
+    antialias: false,
+    premultipliedAlpha: false,
+    preserveDrawingBuffer: true,
+});
 const fileInput = $("input[type='file']");
 const submitButton = $("input[type='submit']");
-let imgData = null;
-let pixelBuf = null;
+const audioElement = new Audio();
+const signalBuffers = [new Float32Array(fftSize), new Float32Array(fftSize)];
+const analysers = [null, null];
+let viewportSize = 0;
 
-let fileURL = null;
-let audio = null;
-let src = null;
+function main()
+{
+    submitButton.addEventListener("click", onSubmit);
+    $("button#stop").addEventListener("click", onStopPlaying);
+    audioElement.addEventListener("canplay", onCanPlay);
+    audioElement.addEventListener("ended", onStopPlaying);
+    window.addEventListener("resize", onResize);
 
-let audioCtx = new AudioContext();
-let splitter = audioCtx.createChannelSplitter(2);
+    audioSetup();
+    glSetup();
+    onResize();
+    requestAnimationFrame(render);
+}
 
-let analyserLeft = audioCtx.createAnalyser();
-analyserLeft.fftSize = 2 << 14;
-let leftBuffer = new Float32Array(analyserLeft.fftSize);
+document.addEventListener("DOMContentLoaded", main);
 
-let analyserRight = audioCtx.createAnalyser();
-analyserRight.fftSize = analyserLeft.fftSize;
-let rightBuffer = new Float32Array(analyserLeft.fftSize);
-
-let merger = audioCtx.createChannelMerger(2);
-
-splitter.connect(analyserLeft, 0);
-splitter.connect(analyserRight, 1);
-analyserLeft.connect(merger, 0, 0);
-analyserRight.connect(merger, 0, 1);
-merger.connect(audioCtx.destination);
-audioCtx.resume();
-
-function onSubmit() {
-    if (fileInput.files.length != 1) {
+function onSubmit()
+{
+    if (fileInput.files.length != 1)
+    {
         alert("one file please");
         return;
     }
 
     submitButton.disabled = true;
-    fileURL = URL.createObjectURL(fileInput.files[0]);
+    let fileURL = URL.createObjectURL(fileInput.files[0]);
     fileInput.value = "";
-    audio = new Audio(fileURL);
-    src = audioCtx.createMediaElementSource(audio);
+    audioElement.src = fileURL;
 
-    src.connect(splitter);
-    audio.addEventListener("error",
-        (e) => {
-            alert(e);
-            onStopPlaying();
-        }
-    );
-    audio.addEventListener("canplay", onCanPlay);
-    audio.addEventListener("ended", onStopPlaying);
+    // without this the blob urls leak
+    audioElement.addEventListener("canplay", () => URL.revokeObjectURL(fileURL), { once: true });
+
+    // added here to be removed by onStopPlaying -- causes a loop otherwise
+    audioElement.addEventListener("error", onError, { once: true });
 }
 
-function onCanPlay() {
-    if (audioCtx.state !== "running")
+function onCanPlay()
+{
+    document.documentElement.classList.add("playing");
+    audioElement.play();
+}
+
+function onError()
+{
+    alert("are you sure that's an audio file? maybe your browser can't read it");
+    onStopPlaying();
+}
+
+function onStopPlaying()
+{
+    if (audioElement.src === "")
         return;
 
-    document.documentElement.classList.add("playing");
-    audio.play();
-}
+    audioElement.removeEventListener("error", onError); // prevent loop
+    audioElement.pause();
 
-function onStopPlaying() {
+    audioElement.src = "";
     document.documentElement.classList.remove("playing");
     submitButton.disabled = false;
-
-    if (src) {
-        src.disconnect();
-        src = null;
-    }
-
-    if (audio) {
-        audio.pause();
-        audio = null;
-    }
-
-    if (fileURL) {
-        URL.revokeObjectURL(fileURL);
-        fileURL = null;
-    }
 }
 
-submitButton.addEventListener("click", onSubmit);
-$("button#stop").addEventListener("click", onStopPlaying);
+function onResize()
+{
+    // canvas.width = window.innerWidth;
+    // canvas.height = window.innerHeight;
+    viewportSize = Math.min(window.innerWidth, window.innerHeight);
+    canvas.width = canvas.height = viewportSize;
 
-let viewportSize = 0;
-let viewportOrigin = [0, 0];
+    // if(canvas.width > canvas.height)
+    //     gl.viewport(canvas.width / 2 - viewportSize / 2, 0, viewportSize, viewportSize);
+    // else
+    //     gl.viewport(0, canvas.height / 2 - viewportSize / 2, viewportSize, viewportSize);
 
-function onResize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    viewportSize = Math.min(canvas.width, canvas.height);
+    gl.viewport(0, 0, viewportSize, viewportSize);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    /* ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     imgData = ctx.createImageData(viewportSize, viewportSize);
     imgBuf = new Uint32Array(imgData.data.buffer);
 
     imgBuf.fill(0xFF000000);
 
-    if (canvas.width == canvas.height)
+    if(canvas.width == canvas.height)
         return;
 
-    if (canvas.width > canvas.height)
+    if(canvas.width > canvas.height)
         viewportOrigin = [canvas.width / 2 - viewportSize / 2, 0];
     else
-        viewportOrigin = [0, canvas.height / 2 - viewportSize / 2];
+        viewportOrigin = [0, canvas.height / 2 - viewportSize / 2]; */
 }
 
-let last = 0;
+function audioSetup()
+{
+    const ctx = new AudioContext();
+    const audioSrc = ctx.createMediaElementSource(audioElement);
+    const splitter = ctx.createChannelSplitter(2);
+    const merger = ctx.createChannelMerger(2);
+    const analyserLeft = ctx.createAnalyser();
+    const analyserRight = ctx.createAnalyser();
+    analysers[0] = analyserLeft;
+    analysers[1] = analyserRight;
+    analyserLeft.fftSize = analyserRight.fftSize = fftSize;
 
-function render(now) {
+    // audio -> splitter -> (left analyzer | right analyzer) -> merger -> speakers
+    audioSrc.connect(splitter);
+    splitter.connect(analyserLeft, 0);
+    splitter.connect(analyserRight, 1);
+    analyserLeft.connect(merger, 0, 0);
+    analyserRight.connect(merger, 0, 1);
+    merger.connect(ctx.destination);
+
+    ctx.resume(); // get the pipeline going
+}
+
+let prog;
+let unifTime;
+
+function glSetup()
+{
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.SCISSOR_TEST);
+    gl.disable(gl.CULL_FACE);
+    gl.clearColor(1, 0, 1, 1);
+
+    let vs = gl.createShader(gl.VERTEX_SHADER);
+    let fs = gl.createShader(gl.FRAGMENT_SHADER)
+
+    function compile(shader, src)
+    {
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
+            throw new Error(gl.getShaderInfoLog(shader));
+    }
+
+    compile(vs, "attribute vec2 pos; attribute vec3 vertColor; varying vec3 color; uniform float time; void main() { color = vertColor; gl_Position = vec4(pos, 0.0, 1.0); }");
+    compile(fs, "precision highp float; varying vec3 color; void main() { gl_FragColor = vec4(color, 1.0); }");
+
+    prog = gl.createProgram();
+
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    gl.validateProgram(prog);
+    gl.useProgram(prog);
+
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS) || !gl.getProgramParameter(prog, gl.VALIDATE_STATUS))
+        throw new Error(gl.getProgramInfoLog(prog));
+
+    const extent = 0.75;
+    let vertices = Float32Array.of(
+        -extent, +extent, 1, 0, 0,
+        +extent, +extent, 0, 1, 0,
+        +extent, -extent, 0, 0, 1,
+        -extent, -extent, 1, 1, 0,
+    );
+    let indices = Uint8ClampedArray.of(
+        0, 3, 1,
+        1, 3, 2,
+    );
+
+    let vbo = gl.createBuffer();
+    let ibo = gl.createBuffer();
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+
+    const floatSizeof = Float32Array.BYTES_PER_ELEMENT;
+    let posLoc = gl.getAttribLocation(prog, "pos");
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 5 * floatSizeof, 0);
+    let colLoc = gl.getAttribLocation(prog, "vertColor");
+    gl.enableVertexAttribArray(colLoc);
+    gl.vertexAttribPointer(colLoc, 3, gl.FLOAT, false, 5 * floatSizeof, 2 * floatSizeof);
+
+    console.log("nattrs", gl.getProgramParameter(prog, gl.ACTIVE_ATTRIBUTES), posLoc);
+}
+
+function render(now)
+{
+    requestAnimationFrame(render);
+
     now /= 1000;
 
-    requestAnimationFrame(render);
-    analyserLeft.getFloatTimeDomainData(leftBuffer);
-    analyserRight.getFloatTimeDomainData(rightBuffer);
-
-    const darkenRate = 12;
-
-    /*ctx.fillStyle = `rgb(${darkenRate}, ${darkenRate}, ${darkenRate})`;
-    ctx.globalCompositeOperation = "difference";*/
-
-    // ctx.fillStyle = "black";
-    // ctx.fillRect(0, 0, viewportSize, viewportSize);
-
-    //ctx.fillStyle = "#13A10E";
-    //ctx.globalCompositeOperation = "source-over";
-
-    /*for(let i in imgBuf)
-    {
-      const byte = i * 4;
-      
-      for(let chan in [0, 1, 2])
-        imgData.data[byte + chan] = Math.max(0, imgData.data[byte + chan] - darkenRate);
-    }*/
-
-    if (audio === null) {
-        const v = viewportSize / 2;
-        const x = Math.round(v + (v * 0.85) * Math.cos(2 * Math.PI * (now / 10)) - 2);
-        const y = Math.round(v + (v * 0.85) * Math.sin(2 * Math.PI * (now / 10)) - 2);
-        imgBuf[y * viewportSize + x] = 0xFF13A10E;
-    }
-    else {
-        let start = performance.now();
-        for (let i in leftBuffer) {
-            const normX = leftBuffer[i];
-            const normY = rightBuffer[i];
-            const unsignedX = (1 + normX) / 2;
-            const unsignedY = (1 + normY) / 2;
-            const intX = viewportSize - Math.min(Math.max(0, Math.round(unsignedX * viewportSize)), viewportSize);
-            const intY = viewportSize - Math.min(Math.max(0, Math.round(unsignedY * viewportSize)), viewportSize);
-
-
-        }
-        let end = performance.now();
-
-        if (now - last >= 1) {
-            last = now;
-            console.log("draw took ", end - start);
-        }
-    }
-
-    ctx.putImageData(imgData, ...viewportOrigin);
+    gl.clearColor(
+        (1 + Math.sin(now)) / 2,
+        0,
+        (1 + Math.cos(now)) / 2,
+        1
+    );
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_BYTE, 0);
+    gl.flush();
+    gl.finish();
 }
 
-window.addEventListener("resize", onResize);
-onResize();
-requestAnimationFrame(render);
+document.documentElement.addEventListener("click", () => {
+    let as = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
+    let eas = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE);
 
-/*canvas.addEventListener("click", () => {
-  console.log(audioCtx);
-
-  analyserLeft.getFloatTimeDomainData(leftBuffer);
-  analyserRight.getFloatTimeDomainData(rightBuffer);
-
-  console.log(leftBuffer.slice(0, 10), rightBuffer.slice(0, 10));
-});*/
+    console.log(as, eas, gl.getError(), gl.getParameter(gl.VIEWPORT));
+    //console.log(gl.getBufferData());
+});
