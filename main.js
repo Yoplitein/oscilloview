@@ -3,6 +3,7 @@ const lineColor = [0x13, 0xA1, 0x0E].map(v => v / 255);
 
 const $ = document.querySelector.bind(document);
 const canvas = $("canvas");
+/** @type {WebGLRenderingContext} */
 const gl = canvas.getContext("webgl", {
     alpha: true,
     depth: false,
@@ -62,7 +63,7 @@ function onCanPlay()
 
 function onError()
 {
-    alert("are you sure that's an audio file? maybe your browser can't read it");
+    alert("are you sure that's an audio file? your browser doesn't seem to think so");
     onStopPlaying();
 }
 
@@ -71,7 +72,9 @@ function onStopPlaying()
     if (audioElement.src === "")
         return;
 
-    audioElement.removeEventListener("error", onError); // prevent loop
+    // prevent loop -- clearing src below fires error event before we return,
+    //  and onError in turn onError calls onStopPlaying to ensure the upload box is properly reset
+    audioElement.removeEventListener("error", onError);
     audioElement.pause();
 
     audioElement.src = "";
@@ -110,6 +113,12 @@ function audioSetup()
     ctx.resume(); // get the pipeline going
 }
 
+function fatalError(msg)
+{
+    alert(msg);
+    throw new Error(`fatal error: ${msg}`);
+}
+
 let prog;
 let unifTime;
 
@@ -129,7 +138,7 @@ function glSetup()
         gl.compileShader(shader);
 
         if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
-            throw new Error(gl.getShaderInfoLog(shader));
+            fatalError(`Shader failed to compile: ${gl.getShaderInfoLog(shader)}`);
     }
 
     compile(vs, "attribute vec2 pos; attribute vec3 vertColor; varying vec3 color; uniform float time; void main() { color = vertColor; gl_Position = vec4(pos, 0.0, 1.0); }");
@@ -144,7 +153,7 @@ function glSetup()
     gl.useProgram(prog);
 
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS) || !gl.getProgramParameter(prog, gl.VALIDATE_STATUS))
-        throw new Error(gl.getProgramInfoLog(prog));
+        fatalError(`Program failed to link or validate: ${gl.getProgramInfoLog(prog)}`);
 
     const extent = 0.75;
     let vertices = Float32Array.of(
