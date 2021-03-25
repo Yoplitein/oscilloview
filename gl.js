@@ -57,8 +57,9 @@ class Program
             throw new Error(`Program with shaders ${vsID}, ${fsID} failed to link or validate: ${gl.getProgramInfoLog(prog)}`)
         
         this.uniforms = {};
-        let indices = gl.getUniformIndices(prog, uniforms);
-        uniforms.forEach((name, index) => this.uniforms[name] = indices[index]);
+        
+        for(const name of uniforms)
+            this.uniforms[name] = gl.getUniformLocation(prog, name);
         
         for(const blockName in uniformBlocks)
         {
