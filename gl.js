@@ -94,10 +94,11 @@ class Program
     }
 }
 
+const _defaultBufferUsageHint = 0x88E4; // GL_STATIC_DRAW, can't reference gl object here >.>
+const _bufferScratchTarget = 0x88EC; // ditto for GL_PIXEL_UNPACK_BUFFER
+
 class Buffer
 {
-    static _scratchTarget = gl.PIXEL_UNPACK_BUFFER;
-    
     constructor()
     {
         this.handle = gl.createBuffer();
@@ -106,18 +107,16 @@ class Buffer
     
     length()
     {
-        this._useScratch();
-        return gl.getBufferParameter(_scratchTarget, gl.BUFFER_SIZE);
-    }
-    
-    _useScratch()
-    {
-        gl.bindBuffer(_scratchTarget, this.handle);
+        gl.bindBuffer(_bufferScratchTarget, this.handle);
+        let len = gl.getBufferParameter(_bufferScratchTarget, gl.BUFFER_SIZE);
+        gl.bindBuffer(_bufferScratchTarget, null);
+        return len;
     }
     
     use(target)
     {
         gl.bindBuffer(target, this.handle);
+        this.boundTarget = target;
     }
     
     unuse()
@@ -133,26 +132,30 @@ class Buffer
         gl.bindBufferRange(target, index, this.handle, offset, size);
     }
     
-    setSized(size, usage)
+    setSized(size, usage = _defaultBufferUsageHint)
     {
-        this._useScratch();
-        gl.bufferData(_scratchTarget, size, usage);
+        gl.bindBuffer(_bufferScratchTarget, this.handle);
+        gl.bufferData(_bufferScratchTarget, size, usage);
+        gl.bindBuffer(_bufferScratchTarget, null);
     }
     
-    setData(buf, usage)
+    setData(buf, usage = _defaultBufferUsageHint)
     {
-        this._useScratch();
-        gl.bufferData(_scratchTarget, buf, usage);
+        gl.bindBuffer(_bufferScratchTarget, this.handle);
+        gl.bufferData(_bufferScratchTarget, buf, usage);
+        gl.bindBuffer(_bufferScratchTarget, null);
     }
     
     setSubData(buf, offset)
     {
-        this._useScratch();
+        gl.bindBuffer(_bufferScratchTarget, this.handle);
+        const length = gl.getBufferParameter(_bufferScratchTarget, gl.BUFFER_SIZE);
         
-        if(this.length() - offset > buf.length)
-            throw new Error("setSubData buffer overflow");
+        if(buf.length > length - offset)
+            throw new Error(`setSubData buffer overflow: trying to write buffer of length ${buf.length} at ${offset} into buffer of size ${length} (only have ${length - offset})`);
         
-        gl.bufferSubData(_scratchTarget, offset, buf);
+        gl.bufferSubData(_bufferScratchTarget, offset, buf);
+        gl.bindBuffer(_bufferScratchTarget, null);
     }
 }
 
