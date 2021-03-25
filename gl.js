@@ -1,3 +1,5 @@
+const floatSizeof = Float32Array.BYTES_PER_ELEMENT;
+
 /** @type {WebGL2RenderingContext} */
 let gl = null;
 
@@ -16,6 +18,7 @@ export function init(canvas)
         failIfMajorPerformanceCaveat: false,
         powerPreference: "high-performance",
     });
+    window.gl = gl;
     
     if(gl === null)
         throw new Error("Could not create WebGL context, does your device support WebGL 2?");
@@ -41,8 +44,8 @@ class Program
 {
     constructor(vsID, fsID, uniforms = [], uniformBlocks = {})
     {
-        let vs = _compileShader(vsID);
-        let fs = _compileShader(fsID);
+        let vs = this.constructor._compileShader(vsID, gl.VERTEX_SHADER);
+        let fs = this.constructor._compileShader(fsID, gl.FRAGMENT_SHADER);
         let prog = this.handle = gl.createProgram();
         
         gl.attachShader(prog, vs);
@@ -62,7 +65,10 @@ class Program
             const binding = uniformBlocks[blockName];
             const index = gl.getUniformBlockIndex(prog, blockName);
             
-            gl.uniformBlockBinding(prog, index, binding);
+            if(index != gl.INVALID_INDEX)
+                gl.uniformBlockBinding(prog, index, binding);
+            else
+                console.warn(`Invalid index for uniform block ${blockName} on for program ${vsID}, ${fsID}`)
         }
     }
     
@@ -77,7 +83,7 @@ class Program
         gl.shaderSource(shader, script.textContent);
         gl.compileShader(shader);
         
-        if(!gl.getShaderParameter(gl.COMPILE_STATUS))
+        if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
             throw new Error(`Failed to compile shader ${id}: ${gl.getShaderInfoLog(shader)}`);
         
         return shader;
@@ -169,14 +175,15 @@ class VertexAttrLayout
         
         for(const attrName in layout)
         {
-            const {buffer, size, type} = inputLayout[attrName];
-            const stride = inputLayout["stride"] || 0;
-            const offset = inputLayout["offset"] || 0;
-            const divisor = inputLayout["divisor"] || 0;
+            const {buffer, size, type} = layout[attrName];
+            const normalizeInts = layout[attrName]["normalizeInts"] || false;
+            const stride = layout[attrName]["stride"] || 0;
+            const offset = layout[attrName]["offset"] || 0;
+            const divisor = layout[attrName]["divisor"] || 0;
             
             buffer.use(gl.ARRAY_BUFFER);
             gl.enableVertexAttribArray(index);
-            gl.vertexAttribPointer(index, size, type, stride, offset);
+            gl.vertexAttribPointer(index, size, type, normalizeInts, stride, offset);
             gl.vertexAttribDivisor(index, divisor);
             buffer.unuse();
             
