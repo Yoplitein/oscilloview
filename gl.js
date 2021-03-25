@@ -3,7 +3,18 @@ const floatSizeof = Float32Array.BYTES_PER_ELEMENT;
 /** @type {WebGL2RenderingContext} */
 let gl = null;
 
-// let 
+let fftSize = null;
+let rightChannelOffset = 0;
+
+// let dummyBuf;
+let samplesBuf;
+// let quadBuf;
+
+let pointProg;
+let pointLayout;
+
+let quadProg;
+let quadLayout;
 
 export function init(canvas)
 {
@@ -26,6 +37,56 @@ export function init(canvas)
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.SCISSOR_TEST);
     gl.disable(gl.CULL_FACE);
+    
+    // dummyBuf = new Buffer();
+    samplesBuf = new Buffer();
+    // quadBuf = new Buffer();
+    
+    // dummyBuf.setData(Uint8Array.of(0));
+    
+    pointProg = new Program("point-vs", "point-fs", ["pointSize", "pointColor"]);
+    
+    pointProg.use();
+    console.log(pointProg.uniforms);
+    gl.uniform1f(pointProg.uniforms["pointSize"], 5);
+    gl.uniform3f(pointProg.uniforms["pointColor"], 1, 1, 1);
+    pointProg.unuse();
+    
+    // quadProg = new Program("quad-vs", "quad-fs", ["fadeRate"]);
+}
+
+export function prepare(_fftSize)
+{
+    fftSize = _fftSize;
+    
+    let bufSize = floatSizeof * fftSize * 2;
+    const halfSize = floatSizeof * fftSize;
+    
+    const align = floatSizeof; //gl.getParameter(gl.UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+    const alignOffset = halfSize % align === 0 ? 0 : align - (halfSize % align);
+    bufSize += alignOffset;
+    rightChannelOffset = halfSize + alignOffset;
+    
+    /*if(bufSize > gl.getParameter(gl.MAX_UNIFORM_BLOCK_SIZE))
+        throw new Error("Required uniform buffer size exceeds device capability");*/
+    
+    samplesBuf.setSized(bufSize, gl.STREAM_DRAW);
+    // samplesBuf.useIndexed(gl.UNIFORM_BUFFER, 0, 0, halfSize);
+    // samplesBuf.useIndexed(gl.UNIFORM_BUFFER, 1, halfSize + alignOffset, halfSize);
+    
+    pointLayout = new VertexAttrLayout({
+        x: {
+            buffer: samplesBuf,
+            size: 1,
+            type: gl.FLOAT,
+        },
+        y: {
+            buffer: samplesBuf,
+            size: 1,
+            type: gl.FLOAT,
+            offset: rightChannelOffset,
+        }
+    });
 }
 
 export function resize(viewportSize)
@@ -36,8 +97,17 @@ export function resize(viewportSize)
 
 export function render(now, [chanLeft, chanRight])
 {
-    // TODO
-    // console.log(now, chanLeft, chanRight);
+    samplesBuf.setSubData(chanLeft, 0);
+    samplesBuf.setSubData(chanRight, rightChannelOffset);
+    
+    gl.clearColor((1 + Math.cos(now)) / 2, 0, (1 + Math.sin(now)) / 2, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    
+    pointProg.use();
+    pointLayout.use();
+    gl.drawArrays(gl.POINTS, 0, fftSize);
+    pointProg.unuse();
+    pointLayout.unuse();
 }
 
 class Program

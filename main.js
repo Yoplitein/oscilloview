@@ -9,6 +9,7 @@ function main()
     
     gl.init(canvas);
     onResize();
+    gl.prepare(views[0].length);
     render(0);
 }
 
@@ -31,6 +32,7 @@ window.addEventListener("click", () => {
     
     console.log(noise);
 });
+window.dispatchEvent(new MouseEvent("click"));
 
 function render(now)
 {

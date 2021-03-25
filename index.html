@@ -61,6 +61,33 @@
         <input type="submit" value="do the thing">
     </div>
     <button id="stop">Stop</button>
+    
     <script type="module" src="main.js"></script>
+    <script type="glsl" id="point-vs">#version 300 es
+        precision mediump float;
+        
+        layout(location = 0) in float x;
+        layout(location = 1) in float y;
+        
+        uniform float pointSize;
+        
+        void main()
+        {
+            gl_PointSize = pointSize;
+            gl_Position = vec4(x, y, 0, 1);
+        }
+    </script>
+    <script type="glsl" id="point-fs">#version 300 es
+        precision mediump float;
+        
+        out vec3 outColor;
+        
+        uniform vec3 pointColor;
+        
+        void main()
+        {
+            outColor = pointColor;
+        }
+    </script>
 </body>
 </html>
