@@ -7,6 +7,7 @@ const submitButton = $("input[type='submit']");
 const audioElement = new Audio();
 const signalBuffers = [null, null];
 const analysers = [null, null];
+let playing = false;
 
 function main()
 {
@@ -27,7 +28,7 @@ document.addEventListener("DOMContentLoaded", main);
 
 function onResize()
 {
-    let viewportSize = Math.min(window.innerWidth, window.innerHeight);
+    const viewportSize = Math.min(window.innerWidth, window.innerHeight);
     canvas.width = canvas.height = viewportSize;
     
     gl.resize(viewportSize);
@@ -40,7 +41,7 @@ function onSubmit()
     
     submitButton.disabled = true;
     
-    let fileURL = URL.createObjectURL(fileInput.files[0]);
+    const fileURL = URL.createObjectURL(fileInput.files[0]);
     fileInput.value = "";
     audioElement.src = fileURL;
     
@@ -58,6 +59,8 @@ function onCanPlay()
 {
     document.documentElement.classList.add("playing");
     audioElement.play();
+    
+    playing = true;
 }
 
 function onError()
@@ -79,6 +82,8 @@ function onStopPlaying()
     audioElement.src = "";
     document.documentElement.classList.remove("playing");
     submitButton.disabled = false;
+    
+    playing = false;
 }
 
 function audioSetup()
@@ -103,21 +108,20 @@ function audioSetup()
     ctx.resume(); // get the pipeline going
 }
 
-let noise = new Float32Array(32);
-let views = [new Float32Array(noise.buffer, 0, 16), new Float32Array(noise.buffer, 16 * Float32Array.BYTES_PER_ELEMENT, 16)];
-
-window.addEventListener("click", () => {
-    for(let i in noise)
-        noise[i] = Math.random() * 2 - 1;
-    
-    console.log(noise);
-});
-window.dispatchEvent(new MouseEvent("click"));
-
 function render(now)
 {
     now /= 1000;
     
-    gl.render(now, views);
+    if(!playing && Math.random() < 0.15)
+        for(let buf of signalBuffers)
+            for(let i in buf)
+                buf[i] = Math.random() * 2 - 1;
+    else if(playing)
+    {
+        analysers[0].getFloatTimeDomainData(signalBuffers[0]);
+        analysers[1].getFloatTimeDomainData(signalBuffers[1]);
+    }
+    
+    gl.render(now, signalBuffers);
     requestAnimationFrame(render);
 }
