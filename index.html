@@ -80,13 +80,13 @@
     <script type="glsl" id="point-fs">#version 300 es
         precision mediump float;
         
-        out vec3 outColor;
+        out vec4 outColor;
         
         uniform vec3 pointColor;
         
         void main()
         {
-            outColor = pointColor;
+            outColor = vec4(pointColor, 1);
         }
     </script>
 </body>
