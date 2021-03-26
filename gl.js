@@ -49,7 +49,7 @@ export function init(canvas)
     // quadProg = new Program("quad-vs", "quad-fs", ["fadeRate"]);
 }
 
-export function prepare(_fftSize, pointSize, pointColor, flipX, flipY)
+export function prepare(_fftSize, pointSize, pointColor, fadeRate, flipX, flipY)
 {
     fftSize = _fftSize;
     
