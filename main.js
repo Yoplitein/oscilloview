@@ -15,6 +15,9 @@ function main()
     audioElement.addEventListener("canplay", onCanPlay);
     audioElement.addEventListener("ended", onStopPlaying);
     window.addEventListener("resize", onResize);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKey);
+    window.addEventListener("click", onClick);
     
     audioSetup();
     gl.init(canvas);
@@ -129,6 +132,27 @@ function onStopPlaying()
     
     prepare(128, 2, [1, 0, 1], false, false);
     playing = false;
+}
+
+let shiftKeyHeld = false;
+
+function onKey(event)
+{
+    if(event.target !== document.body)
+        return;
+    
+    shiftKeyHeld = event.shiftKey;
+}
+
+function onClick(event)
+{
+    if((event.target !== canvas && event.target !== document.documentElement) || !shiftKeyHeld || !playing)
+        return;
+    
+    const px = event.clientX / window.innerWidth;
+    const dest = audioElement.duration * px;
+    console.log("seek to ", dest, px);
+    audioElement.fastSeek(dest);
 }
 
 function audioSetup()
