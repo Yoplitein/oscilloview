@@ -70,11 +70,18 @@
         layout(location = 1) in float y;
         
         uniform float pointSize;
+        uniform bool flipX;
+        uniform bool flipY;
         
         void main()
         {
             gl_PointSize = pointSize;
-            gl_Position = vec4(x, y, 0, 1);
+            gl_Position = vec4(
+                x * (flipX ? -1.0 : 1.0),
+                y * (flipY ? -1.0 : 1.0),
+                0,
+                1
+            );
         }
     </script>
     <script type="glsl" id="point-fs">#version 300 es

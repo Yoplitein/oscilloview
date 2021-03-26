@@ -44,12 +44,13 @@ export function init(canvas)
     
     // dummyBuf.setData(Uint8Array.of(0));
     
-    pointProg = new Program("point-vs", "point-fs", ["pointSize", "pointColor"]);
+    pointProg = new Program("point-vs", "point-fs", ["pointSize", "pointColor", "flipX", "flipY"]);
     
     pointProg.use();
-    console.log(pointProg.uniforms);
     gl.uniform1f(pointProg.uniforms["pointSize"], 5);
     gl.uniform3f(pointProg.uniforms["pointColor"], 1, 1, 1);
+    gl.uniform1f(pointProg.uniforms["flipX"], false);
+    gl.uniform1f(pointProg.uniforms["flipY"], false);
     pointProg.unuse();
     
     // quadProg = new Program("quad-vs", "quad-fs", ["fadeRate"]);
