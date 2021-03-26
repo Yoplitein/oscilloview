@@ -46,17 +46,10 @@ export function init(canvas)
     
     pointProg = new Program("point-vs", "point-fs", ["pointSize", "pointColor", "flipX", "flipY"]);
     
-    pointProg.use();
-    gl.uniform1f(pointProg.uniforms["pointSize"], 5);
-    gl.uniform3f(pointProg.uniforms["pointColor"], 1, 1, 1);
-    gl.uniform1f(pointProg.uniforms["flipX"], false);
-    gl.uniform1f(pointProg.uniforms["flipY"], false);
-    pointProg.unuse();
-    
     // quadProg = new Program("quad-vs", "quad-fs", ["fadeRate"]);
 }
 
-export function prepare(_fftSize)
+export function prepare(_fftSize, pointSize, pointColor, flipX, flipY)
 {
     fftSize = _fftSize;
     
@@ -88,7 +81,14 @@ export function prepare(_fftSize)
             offset: rightChannelOffset,
         }
     });
-}
+    
+    pointProg.use();
+    gl.uniform1f(pointProg.uniforms["pointSize"], pointSize);
+    gl.uniform3f(pointProg.uniforms["pointColor"], ...pointColor);
+    gl.uniform1f(pointProg.uniforms["flipX"], flipX);
+    gl.uniform1f(pointProg.uniforms["flipY"], flipY);
+    pointProg.unuse();
+}    
 
 export function resize(viewportSize)
 {
@@ -101,9 +101,6 @@ export function render(now, [chanLeft, chanRight])
     samplesBuf.setSubData(chanLeft, 0);
     samplesBuf.setSubData(chanRight, rightChannelOffset);
     
-    gl.clearColor((1 + Math.cos(now)) / 2, 0, (1 + Math.sin(now)) / 2, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    
     pointProg.use();
     pointLayout.use();
     gl.drawArrays(gl.POINTS, 0, fftSize);
@@ -115,9 +112,9 @@ class Program
 {
     constructor(vsID, fsID, uniforms = [], uniformBlocks = {})
     {
-        let vs = this.constructor._compileShader(vsID, gl.VERTEX_SHADER);
-        let fs = this.constructor._compileShader(fsID, gl.FRAGMENT_SHADER);
-        let prog = this.handle = gl.createProgram();
+        const vs = this.constructor._compileShader(vsID, gl.VERTEX_SHADER);
+        const fs = this.constructor._compileShader(fsID, gl.FRAGMENT_SHADER);
+        const prog = this.handle = gl.createProgram();
         
         gl.attachShader(prog, vs);
         gl.attachShader(prog, fs);
@@ -146,12 +143,12 @@ class Program
     
     static _compileShader(id, type)
     {
-        let script = document.querySelector(`script#${id}`);
+        const script = document.querySelector(`script#${id}`);
         
         if(script === null)
             throw new Error(`script tag with id ${id} not found`);
         
-        let shader = gl.createShader(type);
+        const shader = gl.createShader(type);
         gl.shaderSource(shader, script.textContent);
         gl.compileShader(shader);
         
@@ -186,7 +183,7 @@ class Buffer
     length()
     {
         gl.bindBuffer(_bufferScratchTarget, this.handle);
-        let len = gl.getBufferParameter(_bufferScratchTarget, gl.BUFFER_SIZE);
+        const len = gl.getBufferParameter(_bufferScratchTarget, gl.BUFFER_SIZE);
         gl.bindBuffer(_bufferScratchTarget, null);
         return len;
     }

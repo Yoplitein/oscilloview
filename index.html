@@ -19,18 +19,24 @@
             left: 50%;
             transform: translate(-50%, -50%);
         }
+        
+        br
+        {
+            clear: both;
+        }
 
         div#box
         {
+            color: white;
             padding: 15px 30px;
-            background-color: #505050;
+            background-color: #333333;
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
         }
 
-        div#box input[type="submit"]
+        div#box input:not([type="checkbox"]), div#box select
         {
             float: right;
         }
@@ -51,16 +57,50 @@
         {
             display: none;
         }
+        
+        label
+        {
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
     <canvas></canvas>
     <div id="box">
-        <input type="file">
-        <br>
-        <input type="submit" value="do the thing">
+        <form action="">
+            <input type="file" name="file">
+            <br>
+            <label for="fftSize">Window size (samples)</label>
+            <select name="fftSize">
+                <option value="32">2^5</option>
+                <option value="64">2^6</option>
+                <option value="128">2^7</option>
+                <option value="256">2^8</option>
+                <option value="512">2^9</option>
+                <option value="1024" selected>2^10</option>
+                <option value="2048">2^11</option>
+                <option value="4096">2^12</option>
+                <option value="8192">2^13</option>
+            </select>
+            <br>
+            <label for="pointSize">Point size (pixels)</label>
+            <input type="number" name="pointSize" value="2.0">
+            <br>
+            <label for="color">Point color (hex)</label>
+            <input type="text" name="color" pattern="[0-9A-Fa-f]{6}" value="13A10E" placeholder="13A10E">
+            <br>
+            <label for="fadeRate">Fade rate (float color/frame)</label>
+            <input type="number" name="fadeRate" value="0.1">
+            <br>
+            <label for="flipX">Flip X</label><input type="checkbox" name="flipX">&nbsp;
+            <label for="flipY">Flip Y</label><input type="checkbox" name="flipY">
+            <br>
+            <input type="submit" value="do the thing">
+        </form>
     </div>
     <button id="stop">Stop</button>
+    
+    <!-- ****************************************************************** -->
     
     <script type="module" src="main.js"></script>
     <script type="glsl" id="point-vs">#version 300 es
