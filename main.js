@@ -10,12 +10,16 @@ let gainNode = null;
 const signalBuffers = [null, null];
 const analysers = [null, null];
 let playing = false; // whether we have an audio file loaded and are rendering its samples
+let paused = false; // meaningless if above is false, whether playback has been paused (and we need to fake it)
+let lastGain = null; // saves user-specified gain when muting (during faked pause)
+let pauseTime = null; // timestamp we are warping back to every 100ms to fake pause
+let pauseWorker = null; // setInterval id for the task that sets audioElement.currentTime when faking pause
 
 function main()
 {
     $("form").addEventListener("submit", onSubmit);
     volumeSlider.addEventListener("input", onSetVolume);
-    $("button#playPause").addEventListener("click", onTogglePlaying);
+    $("button#playPause").addEventListener("click", onTogglePause);
     $("button#stop").addEventListener("click", onStopPlaying);
     audioElement.addEventListener("canplay", onCanPlay);
     audioElement.addEventListener("ended", onStopPlaying);
@@ -40,8 +44,6 @@ document.addEventListener("DOMContentLoaded", main);
 
 function prepare(fftSize, pointSize, pointColor, fadeRate, flipX, flipY, drawLines)
 {
-    console.log("prepare", arguments);
-    
     signalBuffers[0] = new Float32Array(fftSize);
     signalBuffers[1] = new Float32Array(fftSize);
     
@@ -60,7 +62,6 @@ function onSubmit(event)
 {
     event.preventDefault();
     const fields = event.target.elements;
-    console.log(fields);
     
     if(fields.file.files.length != 1)
         throw new Error("One file please");
@@ -141,24 +142,55 @@ function onStopPlaying()
     submitButton.disabled = false;
     
     prepare(128, 2, [1, 0, 1], false, false, false);
+    
+    paused = false;
+    if(lastGain !== null)
+        resetPause();
+    
     playing = false;
 }
 
-function onTogglePlaying()
+function resetPause()
 {
-    if(audioElement.src === "")
+    clearInterval(pauseWorker);
+    pauseWorker = null;
+    pauseTime = null;
+    gainNode.gain.value = lastGain;
+    lastGain = null;
+    onSetVolume();
+}
+
+function onTogglePause()
+{
+    if(!playing)
         return;
     
-    if(audioElement.paused)
-        audioElement.play();
+    paused = !paused;
+    
+    if(paused)
+    {
+        lastGain = gainNode.gain.value;
+        gainNode.gain.value = 0;
+        
+        pauseTime = audioElement.currentTime;
+        pauseWorker = setInterval(() => audioElement.currentTime = pauseTime, 100);
+    }
     else
-        audioElement.pause();
+        resetPause();
 }
 
 function onSetVolume()
 {
     const volMax = 1000; // really should be volumeSlider.max, but this is called very frequently
-    gainNode.gain.value = volumeSlider.value / volMax;
+    const val = volumeSlider.value / volMax;
+    
+    if(paused)
+    {
+        lastGain = val;
+        return;
+    }
+    else
+        gainNode.gain.value = val;
 }
 
 let shiftKeyHeld = false;
@@ -178,8 +210,8 @@ function onClick(event)
     
     const px = event.clientX / window.innerWidth;
     const dest = audioElement.duration * px;
-    console.log("seek to ", dest, px);
-    audioElement.fastSeek(dest);
+    if(paused) pauseTime = dest;
+    else audioElement.fastSeek(dest);
 }
 
 function audioSetup()
