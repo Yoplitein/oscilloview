@@ -6,9 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oscilloview</title>
     <style>
+        :root {
+            --body-bg: #101010;
+            --box-bg: #333333;
+        }
+        
         body
         {
-            background-color: #101010;
+            background-color: var(--body-bg);
             margin: 0px;
         }
 
@@ -29,7 +34,7 @@
         {
             color: white;
             padding: 15px 30px;
-            background-color: #333333;
+            background-color: var(--box-bg);
             position: fixed;
             top: 50%;
             left: 50%;
@@ -62,6 +67,35 @@
         {
             margin-right: 5px;
         }
+        
+        span.note
+        {
+            text-decoration: underline;
+        }
+        
+        span.note::before
+        {
+            content: attr(title);
+            display: none;
+            position: absolute;
+            margin-top: -4.2em;
+            padding: .25em 1em;
+            border: 1px solid black;
+            border-radius: 15px;
+            background-color: var(--box-bg);
+        }
+        
+        span.note:hover::before
+        {
+            display: block;
+        }
+        
+        span.note::after
+        {
+            content: '*';
+            color: red;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
@@ -83,7 +117,10 @@
                 <option value="8192">2^13</option>
             </select>
             <br>
-            <label for="pointSize">Point size (pixels)</label>
+            <label for="pointSize">
+                <span class="note" title="And only points, unfortunately. Most implementations don't support setting line sizes.">Point</span>
+                size (pixels)
+            </label>
             <input type="number" name="pointSize" value="2.0">
             <br>
             <label for="color">Point color (hex)</label>
