@@ -5,6 +5,7 @@ let gl = null;
 
 let fftSize = null;
 let rightChannelOffset = 0;
+let drawLines = false;
 
 // let dummyBuf;
 let samplesBuf;
@@ -49,9 +50,10 @@ export function init(canvas)
     // quadProg = new Program("quad-vs", "quad-fs", ["fadeRate"]);
 }
 
-export function prepare(_fftSize, pointSize, pointColor, fadeRate, flipX, flipY)
+export function prepare(_fftSize, pointSize, pointColor, fadeRate, flipX, flipY, _drawLines)
 {
     fftSize = _fftSize;
+    drawLines = _drawLines;
     
     let bufSize = floatSizeof * fftSize * 2;
     const halfSize = floatSizeof * fftSize;
@@ -103,7 +105,7 @@ export function render(now, [chanLeft, chanRight])
     
     pointProg.use();
     pointLayout.use();
-    gl.drawArrays(gl.POINTS, 0, fftSize);
+    gl.drawArrays(drawLines ? gl.LINE_STRIP : gl.POINTS, 0, fftSize);
     pointProg.unuse();
     pointLayout.unuse();
 }

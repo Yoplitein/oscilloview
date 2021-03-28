@@ -22,20 +22,20 @@ function main()
     audioSetup();
     gl.init(canvas);
     onResize();
-    prepare(128, 2, [1, 0, 1], false, false);
+    prepare(128, 2, [1, 0, 1], false, false, false);
     render(0);
 }
 
 document.addEventListener("DOMContentLoaded", main);
 
-function prepare(fftSize, pointSize, pointColor, fadeRate, flipX, flipY)
+function prepare(fftSize, pointSize, pointColor, fadeRate, flipX, flipY, drawLines)
 {
     console.log("prepare", arguments);
     
     signalBuffers[0] = new Float32Array(fftSize);
     signalBuffers[1] = new Float32Array(fftSize);
     
-    gl.prepare(fftSize, pointSize, pointColor, fadeRate, flipX, flipY);
+    gl.prepare(fftSize, pointSize, pointColor, fadeRate, flipX, flipY, drawLines);
 }
 
 function onResize()
@@ -72,7 +72,7 @@ function onSubmit(event)
     if(fadeRate <= 0 || fadeRate > 1)
         throw new Error("that fade rate ain't gonna work fam");
     
-    prepare(fftSize, pointSize, parseColor(fields.color.value), fadeRate, fields.flipX.checked, fields.flipY.checked);
+    prepare(fftSize, pointSize, parseColor(fields.color.value), fadeRate, fields.flipX.checked, fields.flipY.checked, fields.drawMode.value === "lines");
     
     const fileURL = URL.createObjectURL(fields.file.files[0]);
     fields.file.value = "";
@@ -130,7 +130,7 @@ function onStopPlaying()
     document.documentElement.classList.remove("playing");
     submitButton.disabled = false;
     
-    prepare(128, 2, [1, 0, 1], false, false);
+    prepare(128, 2, [1, 0, 1], false, false, false);
     playing = false;
 }
 

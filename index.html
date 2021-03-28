@@ -36,7 +36,7 @@
             transform: translate(-50%, -50%);
         }
 
-        div#box input:not([type="checkbox"]), div#box select
+        div#box input:not([type="checkbox"]):not([type="radio"]), div#box select
         {
             float: right;
         }
@@ -94,6 +94,10 @@
             <br>
             <label for="flipX">Flip X</label><input type="checkbox" name="flipX">&nbsp;
             <label for="flipY">Flip Y</label><input type="checkbox" name="flipY">
+            <br>
+            <label for="drawMode">Draw mode</label>&nbsp;&nbsp;&nbsp;&nbsp;
+            Points <input type="radio" name="drawMode" value="points" checked>&nbsp;&nbsp;
+            Lines <input type="radio" name="drawMode" value="lines">
             <br>
             <input type="submit" value="do the thing">
         </form>
