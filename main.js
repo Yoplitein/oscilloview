@@ -3,16 +3,18 @@ import * as gl from "./gl.js";
 const $ = document.querySelector.bind(document);
 const canvas = $("canvas");
 const submitButton = $("input[type='submit']");
+const volumeSlider = $("input#volume");
 const audioCtx = new AudioContext();
 const audioElement = new Audio();
+let gainNode = null;
 const signalBuffers = [null, null];
 const analysers = [null, null];
-let playing = false;
+let playing = false; // whether we have an audio file loaded and are rendering its samples
 
 function main()
 {
     $("form").addEventListener("submit", onSubmit);
-    $("input#volume").addEventListener("input", onSetVolume);
+    volumeSlider.addEventListener("input", onSetVolume);
     $("button#playPause").addEventListener("click", onTogglePlaying);
     $("button#stop").addEventListener("click", onStopPlaying);
     audioElement.addEventListener("canplay", onCanPlay);
@@ -23,6 +25,11 @@ function main()
     window.addEventListener("click", onClick);
     
     audioSetup();
+    
+    //set initial volume to 50%
+    volumeSlider.value = volumeSlider.max / 2;
+    onSetVolume();
+    
     gl.init(canvas);
     onResize();
     prepare(128, 2, [1, 0, 1], false, false, false);
@@ -150,8 +157,8 @@ function onTogglePlaying()
 
 function onSetVolume()
 {
-    const volMax = 1000;
-    audioElement.volume = this.value / volMax;
+    const volMax = 1000; // really should be volumeSlider.max, but this is called very frequently
+    gainNode.gain.value = volumeSlider.value / volMax;
 }
 
 let shiftKeyHeld = false;
@@ -182,6 +189,7 @@ function audioSetup()
     const merger = audioCtx.createChannelMerger(2);
     const analyserLeft = analysers[0] = audioCtx.createAnalyser();
     const analyserRight = analysers[1] = audioCtx.createAnalyser();
+    gainNode = audioCtx.createGain();
     
     // audio -> splitter -> (left analyzer | right analyzer) -> merger -> speakers
     audioSrc.connect(splitter);
@@ -189,7 +197,8 @@ function audioSetup()
     splitter.connect(analyserRight, 1);
     analyserLeft.connect(merger, 0, 0);
     analyserRight.connect(merger, 0, 1);
-    merger.connect(audioCtx.destination);
+    merger.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
     
     audioCtx.resume(); // get the pipeline going
 }
