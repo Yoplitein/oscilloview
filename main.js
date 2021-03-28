@@ -3,6 +3,7 @@ import * as gl from "./gl.js";
 const $ = document.querySelector.bind(document);
 const canvas = $("canvas");
 const submitButton = $("input[type='submit']");
+const audioCtx = new AudioContext();
 const audioElement = new Audio();
 const signalBuffers = [null, null];
 const analysers = [null, null];
@@ -176,14 +177,11 @@ function onClick(event)
 
 function audioSetup()
 {
-    const ctx = new AudioContext();
-    const audioSrc = ctx.createMediaElementSource(audioElement);
-    const splitter = ctx.createChannelSplitter(2);
-    const merger = ctx.createChannelMerger(2);
-    const analyserLeft = ctx.createAnalyser();
-    const analyserRight = ctx.createAnalyser();
-    analysers[0] = analyserLeft;
-    analysers[1] = analyserRight;
+    const audioSrc = audioCtx.createMediaElementSource(audioElement);
+    const splitter = audioCtx.createChannelSplitter(2);
+    const merger = audioCtx.createChannelMerger(2);
+    const analyserLeft = analysers[0] = audioCtx.createAnalyser();
+    const analyserRight = analysers[1] = audioCtx.createAnalyser();
     
     // audio -> splitter -> (left analyzer | right analyzer) -> merger -> speakers
     audioSrc.connect(splitter);
@@ -191,9 +189,9 @@ function audioSetup()
     splitter.connect(analyserRight, 1);
     analyserLeft.connect(merger, 0, 0);
     analyserRight.connect(merger, 0, 1);
-    merger.connect(ctx.destination);
+    merger.connect(audioCtx.destination);
     
-    ctx.resume(); // get the pipeline going
+    audioCtx.resume(); // get the pipeline going
 }
 
 function render(now)
