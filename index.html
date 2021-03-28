@@ -197,5 +197,32 @@
             outColor = vec4(pointColor, 1);
         }
     </script>
+    
+    <script type="glsl" id="quad-vs">#version 300 es
+        precision mediump float;
+        
+        layout(location = 0) in vec2 pos;
+        layout(location = 1) in vec2 uv;
+        
+        out vec2 fragUV;
+        
+        void main()
+        {
+            gl_Position = vec4(pos, 0, 1);
+            fragUV = uv;
+        }
+    </script>
+    <script type="glsl" id="quad-fs">#version 300 es
+        precision mediump float;
+        
+        in vec2 fragUV;
+        
+        out vec4 outColor;
+        
+        void main()
+        {
+            outColor = vec4(fragUV, 1, 1);
+        }
+    </script>
 </body>
 </html>

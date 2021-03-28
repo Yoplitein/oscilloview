@@ -7,9 +7,8 @@ let fftSize = null;
 let rightChannelOffset = 0;
 let drawLines = false;
 
-// let dummyBuf;
 let samplesBuf;
-// let quadBuf;
+let quadBuf;
 
 let pointProg;
 let pointLayout;
@@ -39,15 +38,35 @@ export function init(canvas)
     gl.disable(gl.SCISSOR_TEST);
     gl.disable(gl.CULL_FACE);
     
-    // dummyBuf = new Buffer();
     samplesBuf = new Buffer();
-    // quadBuf = new Buffer();
+    quadBuf = new Buffer();
     
-    // dummyBuf.setData(Uint8Array.of(0));
+    quadBuf.setData(Float32Array.of(
+        -1.0, +1.0,  0.0, 1.0,
+        +1.0, +1.0,  1.0, 1.0,
+        -1.0, -1.0,  0.0, 0.0,
+        +1.0, -1.0,  1.0, 0.0,
+    ));
     
     pointProg = new Program("point-vs", "point-fs", ["pointSize", "pointColor", "flipX", "flipY"]);
+    // pointLayout created in prepare, depends on fft size
     
-    // quadProg = new Program("quad-vs", "quad-fs", ["fadeRate"]);
+    quadProg = new Program("quad-vs", "quad-fs", ["fadeRate"]);
+    quadLayout = new VertexAttrLayout({
+        pos: {
+            buffer: quadBuf,
+            size: 2,
+            type: gl.FLOAT,
+            stride: 4 * floatSizeof,
+        },
+        uv: {
+            buffer: quadBuf,
+            size: 2,
+            type: gl.FLOAT,
+            offset: 2 * floatSizeof,
+            stride: 4 * floatSizeof,
+        }
+    })
 }
 
 export function prepare(_fftSize, pointSize, pointColor, fadeRate, flipX, flipY, _drawLines)
@@ -100,14 +119,20 @@ export function resize(viewportSize)
 
 export function render(now, [chanLeft, chanRight])
 {
-    samplesBuf.setSubData(chanLeft, 0);
+    /* samplesBuf.setSubData(chanLeft, 0);
     samplesBuf.setSubData(chanRight, rightChannelOffset);
     
     pointProg.use();
     pointLayout.use();
     gl.drawArrays(drawLines ? gl.LINE_STRIP : gl.POINTS, 0, fftSize);
-    pointProg.unuse();
     pointLayout.unuse();
+    pointProg.unuse(); */
+    
+    quadProg.use();
+    quadLayout.use();
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    quadLayout.unuse();
+    quadProg.unuse();
 }
 
 class Program
