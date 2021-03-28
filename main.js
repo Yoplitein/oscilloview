@@ -173,7 +173,7 @@ function onKey(event)
 
 function onClick(event)
 {
-    if((event.target !== canvas && event.target !== document.documentElement) || !shiftKeyHeld || !playing)
+    if(event.target instanceof HTMLInputElement || event.target instanceof HTMLButtonElement || !shiftKeyHeld || !playing)
         return;
     
     const px = event.clientX / window.innerWidth;
