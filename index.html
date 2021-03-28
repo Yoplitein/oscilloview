@@ -13,6 +13,7 @@
         
         body
         {
+            color: white;
             background-color: var(--body-bg);
             margin: 0px;
         }
@@ -32,7 +33,6 @@
 
         div#box
         {
-            color: white;
             padding: 15px 30px;
             background-color: var(--box-bg);
             position: fixed;
@@ -51,16 +51,24 @@
             display: none;
         }
 
-        button#stop
+        div#controls
         {
             position: fixed;
+            max-width: calc(50vw - 50vmin);
             top: 5px;
             right: 5px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        div#tip
+        {
+            max-width: calc(50vw - 50vmin);
         }
 
-        html:not(.playing) button#stop
+        html:not(.playing) .hideWhenStopped
         {
-            display: none;
+            display: none !important;
         }
         
         label
@@ -139,7 +147,14 @@
             <input type="submit" value="do the thing">
         </form>
     </div>
-    <button id="stop">Stop</button>
+    <div id="controls" class="hideWhenStopped">
+        <input type="range" id="volume" min="0" max="1000">
+        <button id="playPause">&#x23EF;</button>
+        <button id="stop">&#x23F9;</button>
+    </div>
+    <div id="tip" class="hideWhenStopped">
+        Shift+left click to seek as a percentage of the window width
+    </div>
     
     <!-- ****************************************************************** -->
     

@@ -11,6 +11,8 @@ let playing = false;
 function main()
 {
     $("form").addEventListener("submit", onSubmit);
+    $("input#volume").addEventListener("input", onSetVolume);
+    $("button#playPause").addEventListener("click", onTogglePlaying);
     $("button#stop").addEventListener("click", onStopPlaying);
     audioElement.addEventListener("canplay", onCanPlay);
     audioElement.addEventListener("ended", onStopPlaying);
@@ -132,6 +134,23 @@ function onStopPlaying()
     
     prepare(128, 2, [1, 0, 1], false, false, false);
     playing = false;
+}
+
+function onTogglePlaying()
+{
+    if(audioElement.src === "")
+        return;
+    
+    if(audioElement.paused)
+        audioElement.play();
+    else
+        audioElement.pause();
+}
+
+function onSetVolume()
+{
+    const volMax = 1000;
+    audioElement.volume = this.value / volMax;
 }
 
 let shiftKeyHeld = false;
