@@ -121,6 +121,10 @@ function onSubmit(event)
 
     // added here to be removed by onStopPlaying -- causes a loop otherwise
     audioElement.addEventListener("error", onError, { once: true });
+    
+    // get the pipeline going -- has to be here as Chromium only allows resume in response user feedback (e.g. clicking a button)
+    if(audioCtx.currentTime === 0)
+        audioCtx.resume();
 }
 
 function parseColor(hexstr)
@@ -258,8 +262,6 @@ function audioSetup()
     analyserRight.connect(merger, 0, 1);
     merger.connect(gainNode);
     gainNode.connect(audioCtx.destination);
-    
-    audioCtx.resume(); // get the pipeline going
 }
 
 function render(now)
