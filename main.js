@@ -15,18 +15,40 @@ let lastGain = null; // saves user-specified gain when muting (during faked paus
 let pauseTime = null; // timestamp we are warping back to every 100ms to fake pause
 let pauseWorker = null; // setInterval id for the task that sets audioElement.currentTime when faking pause
 
+function wrapThrowing(fn)
+{
+    return (...args) =>
+    {
+        try
+        {
+            fn(...args);
+        }
+        catch(err)
+        {
+            console.log("uncaught err:", err);
+            alert(err);
+            
+            try
+            {
+                onStopPlaying();
+            }
+            catch(_){}
+        }
+    };
+}
+
 function main()
 {
-    $("form").addEventListener("submit", onSubmit);
-    volumeSlider.addEventListener("input", onSetVolume);
-    $("button#playPause").addEventListener("click", onTogglePause);
-    $("button#stop").addEventListener("click", onStopPlaying);
-    audioElement.addEventListener("canplay", onCanPlay);
-    audioElement.addEventListener("ended", onStopPlaying);
-    window.addEventListener("resize", onResize);
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("keyup", onKey);
-    window.addEventListener("click", onClick);
+    $("form").addEventListener("submit", wrapThrowing(onSubmit));
+    volumeSlider.addEventListener("input", wrapThrowing(onSetVolume));
+    $("button#playPause").addEventListener("click", wrapThrowing(onTogglePause));
+    $("button#stop").addEventListener("click", wrapThrowing(onStopPlaying));
+    audioElement.addEventListener("canplay", wrapThrowing(onCanPlay));
+    audioElement.addEventListener("ended", wrapThrowing(onStopPlaying));
+    window.addEventListener("resize", wrapThrowing(onResize));
+    window.addEventListener("keydown", wrapThrowing(onKey));
+    window.addEventListener("keyup", wrapThrowing(onKey));
+    window.addEventListener("click", wrapThrowing(onClick));
     
     audioSetup();
     
@@ -40,7 +62,7 @@ function main()
     render(0);
 }
 
-document.addEventListener("DOMContentLoaded", main);
+document.addEventListener("DOMContentLoaded", wrapThrowing(main));
 
 function prepare(fftSize, pointSize, pointColor, fadeRate, flipX, flipY, drawLines)
 {
