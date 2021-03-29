@@ -15,6 +15,8 @@ let pointLayout;
 
 let quadProg;
 let quadLayout;
+let readTex, writeTex;
+let framebuffer;
 
 export function init(canvas)
 {
@@ -37,6 +39,7 @@ export function init(canvas)
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.SCISSOR_TEST);
     gl.disable(gl.CULL_FACE);
+    gl.clearColor(0, 0, 0, 1);
     
     samplesBuf = new Buffer();
     quadBuf = new Buffer();
@@ -51,7 +54,7 @@ export function init(canvas)
     pointProg = new Program("point-vs", "point-fs", ["pointSize", "pointColor", "flipX", "flipY"]);
     // pointLayout created in prepare, depends on fft size
     
-    quadProg = new Program("quad-vs", "quad-fs", ["fadeRate"]);
+    quadProg = new Program("quad-vs", "quad-fs", ["fadeRate", "tex"]);
     quadLayout = new VertexAttrLayout({
         pos: {
             buffer: quadBuf,
@@ -66,7 +69,26 @@ export function init(canvas)
             offset: 2 * floatSizeof,
             stride: 4 * floatSizeof,
         }
-    })
+    });
+    
+    quadProg.use();
+    gl.uniform1i(quadProg.uniforms.tex, 0);
+    quadProg.unuse();
+    
+    writeTex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, writeTex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    
+    framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, framebuffer);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.DRAW_FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, writeTex, 0);
+    
+    readTex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, readTex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 }
 
 export function prepare(_fftSize, pointSize, pointColor, fadeRate, flipX, flipY, _drawLines)
@@ -104,30 +126,56 @@ export function prepare(_fftSize, pointSize, pointColor, fadeRate, flipX, flipY,
     });
     
     pointProg.use();
-    gl.uniform1f(pointProg.uniforms["pointSize"], pointSize);
-    gl.uniform3f(pointProg.uniforms["pointColor"], ...pointColor);
-    gl.uniform1f(pointProg.uniforms["flipX"], flipX);
-    gl.uniform1f(pointProg.uniforms["flipY"], flipY);
+    gl.uniform1f(pointProg.uniforms.pointSize, pointSize);
+    gl.uniform3f(pointProg.uniforms.pointColor, ...pointColor);
+    gl.uniform1f(pointProg.uniforms.flipX, flipX);
+    gl.uniform1f(pointProg.uniforms.flipY, flipY);
     pointProg.unuse();
+    
+    quadProg.use();
+    gl.uniform1f(quadProg.uniforms.fadeRate, fadeRate);
+    quadProg.unuse();
+    
+    gl.clear(gl.COLOR_BUFFER_BIT);
 }    
 
 export function resize(viewportSize)
 {
     gl.viewport(0, 0, viewportSize, viewportSize);
-    // TODO: recreate framebuffers
+    
+    const zeros = new Uint8Array(viewportSize ** 2 * 4);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, readTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, viewportSize, viewportSize, 0, gl.RGB, gl.UNSIGNED_BYTE, zeros);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, writeTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, viewportSize, viewportSize, 0, gl.RGB, gl.UNSIGNED_BYTE, zeros);
+    
+    gl.activeTexture(gl.TEXTURE0); // make sure we're always binding to unit 0 in render
 }
 
 export function render(now, [chanLeft, chanRight])
 {
-    /* samplesBuf.setSubData(chanLeft, 0);
+    samplesBuf.setSubData(chanLeft, 0);
     samplesBuf.setSubData(chanRight, rightChannelOffset);
     
+    // draw points into existing image
     pointProg.use();
     pointLayout.use();
     gl.drawArrays(drawLines ? gl.LINE_STRIP : gl.POINTS, 0, fftSize);
     pointLayout.unuse();
-    pointProg.unuse(); */
+    pointProg.unuse();
     
+    // blit the intermediate image to the canvas
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+    gl.blitFramebuffer(0, 0, gl.canvas.width, gl.canvas.height, 0, 0, gl.canvas.width, gl.canvas.height, gl.COLOR_BUFFER_BIT, gl.LINEAR);
+    
+    // copy freshly-written frame into read texture
+    gl.bindTexture(gl.TEXTURE_2D, readTex);
+    gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGB, 0, 0, gl.canvas.width, gl.canvas.height, 0);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, framebuffer);
+    
+    // and finally fade out
     quadProg.use();
     quadLayout.use();
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

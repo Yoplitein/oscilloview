@@ -219,9 +219,13 @@
         
         out vec4 outColor;
         
+        uniform sampler2D tex;
+        uniform float fadeRate;
+        
         void main()
         {
-            outColor = vec4(fragUV, 1, 1);
+            vec3 val = max(vec3(0), texture(tex, fragUV).xyz - fadeRate);
+            outColor = vec4(val, 1);
         }
     </script>
 </body>

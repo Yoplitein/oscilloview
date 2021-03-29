@@ -36,7 +36,7 @@ function main()
     
     gl.init(canvas);
     onResize();
-    prepare(128, 2, [1, 0, 1], false, false, false);
+    defaultPrepare();
     render(0);
 }
 
@@ -48,6 +48,11 @@ function prepare(fftSize, pointSize, pointColor, fadeRate, flipX, flipY, drawLin
     signalBuffers[1] = new Float32Array(fftSize);
     
     gl.prepare(fftSize, pointSize, pointColor, fadeRate, flipX, flipY, drawLines);
+}
+
+function defaultPrepare()
+{
+    prepare(256, 2, [1, 0, 1], 0.01, false, false, false);
 }
 
 function onResize()
@@ -86,7 +91,7 @@ function onSubmit(event)
     prepare(fftSize, pointSize, parseColor(fields.color.value), fadeRate, fields.flipX.checked, fields.flipY.checked, fields.drawMode.value === "lines");
     
     const fileURL = URL.createObjectURL(fields.file.files[0]);
-    fields.file.value = "";
+    // fields.file.value = "";
     audioElement.src = fileURL;
 
     // without this the blob urls leak
@@ -141,7 +146,7 @@ function onStopPlaying()
     document.documentElement.classList.remove("playing");
     submitButton.disabled = false;
     
-    prepare(128, 2, [1, 0, 1], false, false, false);
+    defaultPrepare();
     
     paused = false;
     if(lastGain !== null)
