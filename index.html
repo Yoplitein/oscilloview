@@ -50,6 +50,11 @@
         {
             float: right;
         }
+        
+        .nofloat
+        {
+            float: none !important;
+        }
 
         html.playing div#box
         {
@@ -115,7 +120,9 @@
     <canvas></canvas>
     <div id="box">
         <form action="">
-            <input type="file" name="file">
+            <input type="file" name="file" class="nofloat">
+            or&nbsp;
+            <input type="text" name="url" placeholder="Youtube URL" class="nofloat">
             <br>
             <label for="fftSize">Window size (samples)</label>
             <select name="fftSize">

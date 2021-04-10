@@ -1,4 +1,5 @@
 import * as gl from "./gl.js";
+import {getAudioURLForVideo} from "./youtube.js";
 
 const $ = document.querySelector.bind(document);
 const canvas = $("canvas");
@@ -89,8 +90,12 @@ function onSubmit(event)
 {
     event.preventDefault();
     const fields = event.target.elements;
+    const haveURL = fields.url.value != "";
     
-    if(fields.file.files.length != 1)
+    if(haveURL && fields.file.files.length > 0)
+        throw new Error("File or URL, not both yo");
+    
+    if(!haveURL && fields.file.files.length != 1)
         throw new Error("One file please");
     
     submitButton.disabled = true;
@@ -112,12 +117,27 @@ function onSubmit(event)
     
     prepare(fftSize, pointSize, parseColor(fields.color.value), fadeRate, fields.flipX.checked, fields.flipY.checked, fields.drawMode.value === "lines");
     
-    const fileURL = URL.createObjectURL(fields.file.files[0]);
-    // fields.file.value = "";
-    audioElement.src = fileURL;
+    if(haveURL)
+        getAudioURLForVideo(fields.url.value)
+            .then(url => audioElement.src = url)
+            .catch(err => {
+                console.log("url err:", err);
+                alert(err);
+                
+                try
+                {
+                    onStopPlaying();
+                }
+                catch(_) {}
+            });
+    else
+    {
+        const fileURL = URL.createObjectURL(fields.file.files[0]);
+        audioElement.src = fileURL;
 
-    // without this the blob urls leak
-    audioElement.addEventListener("canplay", () => URL.revokeObjectURL(fileURL), { once: true });
+        // without this the blob urls leak
+        audioElement.addEventListener("canplay", () => URL.revokeObjectURL(fileURL), { once: true });
+    }
 
     // added here to be removed by onStopPlaying -- causes a loop otherwise
     audioElement.addEventListener("error", onError, { once: true });
