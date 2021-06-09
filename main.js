@@ -74,7 +74,7 @@ function prepare(fftSize, pointSize, pointColor, fadeRate, flipX, flipY, drawLin
 
 function defaultPrepare()
 {
-    prepare(256, 2, [1, 0, 1], 0.01, false, false, false);
+    prepare(256, 5, [1, 0, 1], 0.01, false, false, false);
 }
 
 function onResize()

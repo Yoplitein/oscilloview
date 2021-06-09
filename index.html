@@ -132,9 +132,9 @@
             <br>
             <label for="pointSize">
                 <span class="note" title="And only points, unfortunately. Most implementations don't support setting line sizes.">Point</span>
-                size (pixels)
+                diameter (pixels)
             </label>
-            <input type="number" name="pointSize" step="any" value="2.5">
+            <input type="number" name="pointSize" step="any" value="5.0">
             <br>
             <label for="color">Point color (hex)</label>
             <input type="text" name="color" pattern="[0-9A-Fa-f]{6}" value="13A10E" placeholder="13A10E">
@@ -194,7 +194,16 @@
         
         void main()
         {
-            outColor = vec4(pointColor, 1);
+            vec2 signedCoord = gl_PointCoord * 2.0 - 1.0;
+            float dist = sqrt(
+                dot(
+                    pow(signedCoord, vec2(2)),
+                    vec2(1) // dot with all ones is equivalent to element sum
+                )
+            );
+            
+            if(dist > 1.0) discard;
+            outColor = vec4(pointColor, max(0.0, 1.0 - dist));
         }
     </script>
     
